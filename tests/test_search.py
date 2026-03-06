@@ -42,7 +42,7 @@ class TestSearchFactories(unittest.TestCase):
         config = AppConfig()
         with patch("search.ChatOpenAI") as MockClass:
             get_llm(config)
-            MockClass.assert_called_once_with(model=config.openai_llm_model, temperature=0.0)
+            MockClass.assert_called_once_with(model=config.openai_llm_model, temperature=0.0, api_key="fake-key")
 
 
 class TestSearchPrompt(unittest.TestCase):
