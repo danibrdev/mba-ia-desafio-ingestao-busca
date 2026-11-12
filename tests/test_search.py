@@ -1,6 +1,3 @@
-"""
-Tests for src/search.py
-"""
 import os
 import sys
 import unittest
@@ -29,6 +26,7 @@ class TestSearchFactories(unittest.TestCase):
     }, clear=True)
     def test_gemini_provider_uses_google_embeddings(self):
         config = AppConfig()
+
         with patch("search.GoogleGenerativeAIEmbeddings") as MockClass:
             get_embeddings(config)
             MockClass.assert_called_once()
@@ -42,7 +40,11 @@ class TestSearchFactories(unittest.TestCase):
         config = AppConfig()
         with patch("search.ChatOpenAI") as MockClass:
             get_llm(config)
-            MockClass.assert_called_once_with(model=config.openai_llm_model, temperature=0.0, api_key="fake-key")
+            MockClass.assert_called_once_with(
+                model=config.openai_llm_model,
+                temperature=0.0,
+                api_key="fake-key"
+            )
 
 
 class TestSearchPrompt(unittest.TestCase):
@@ -69,7 +71,6 @@ class TestSearchPrompt(unittest.TestCase):
         mock_store = self._make_store(["Trecho 0", "Trecho 1"])
         fake_llm = self._make_llm("ok")
         search_prompt("Qual conteúdo?", fake_llm, mock_store, [])
-        
         prompt_sent = fake_llm.invoke.call_args[0][0]
         self.assertIn("Trecho 0", prompt_sent)
         self.assertIn("Trecho 1", prompt_sent)
@@ -77,7 +78,6 @@ class TestSearchPrompt(unittest.TestCase):
     def test_prompt_contains_anti_hallucination_rules(self):
         fake_llm = self._make_llm("ok")
         search_prompt("Pergunta?", fake_llm, self._make_store(["Conteúdo."]), [])
-        
         prompt_sent = fake_llm.invoke.call_args[0][0]
         self.assertIn("Responda somente com base no CONTEXTO", prompt_sent)
         self.assertIn("Nunca invente", prompt_sent)

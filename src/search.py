@@ -10,20 +10,14 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 logger = logging.getLogger(__name__)
 
 class AppConfig(BaseSettings):
-    """
-    Centraliza e valida as configurações de ambiente.
-    Funciona como esquema 'Fail-Fast': se faltar algo crítico, a app nem sobe.
-    """
     database_url: str = Field(..., alias="DATABASE_URL")
     collection_name: str = Field("rag_documents", alias="PG_VECTOR_COLLECTION_NAME")
     provider: str = Field("gemini", alias="PROVIDER")
-    
-    # OpenAI config
+
     openai_api_key: Optional[str] = Field(None, alias="OPENAI_API_KEY")
     openai_embedding_model: str = Field("text-embedding-3-small", alias="OPENAI_EMBEDDING_MODEL")
     openai_llm_model: str = Field("gpt-4o-mini", alias="OPENAI_LLM_MODEL")
-    
-    # Gemini config
+
     google_api_key: Optional[str] = Field(None, alias="GOOGLE_API_KEY")
     google_embedding_model: str = Field("models/gemini-embedding-001", alias="GOOGLE_EMBEDDING_MODEL")
     gemini_llm_model: str = Field("gemini-2.5-flash-lite", alias="GEMINI_LLM_MODEL")
@@ -55,7 +49,6 @@ RESPONDA A "PERGUNTA DO USUÁRIO"
 """
 
 def get_embeddings(config: AppConfig):
-    """Factory: retorna o modelo de embeddings conforme o provider."""
     provider = config.provider.lower()
     if provider == "gemini":
         if not config.google_api_key:
@@ -74,24 +67,22 @@ def get_embeddings(config: AppConfig):
 
 
 def get_llm(config: AppConfig):
-    """Factory: retorna o LLM conforme o provider configurado."""
     provider = config.provider.lower()
     if provider == "gemini":
         return ChatGoogleGenerativeAI(
-            model=config.gemini_llm_model, 
+            model=config.gemini_llm_model,
             temperature=0.0,
             google_api_key=config.google_api_key
         )
 
     return ChatOpenAI(
-        model=config.openai_llm_model, 
+        model=config.openai_llm_model,
         temperature=0.0,
         api_key=config.openai_api_key
     )
 
 
 def get_vector_store(config: AppConfig) -> PGVector:
-    """Retorna instância única configurada do PGVector"""
     embeddings = get_embeddings(config)
     return PGVector(
         embeddings=embeddings,
@@ -101,7 +92,6 @@ def get_vector_store(config: AppConfig) -> PGVector:
 
 
 def build_chat_history_str(chat_history: List[Tuple[str, str]]) -> str:
-    """Formata histórico conversacional em texto para o Prompt."""
     if not chat_history:
         return "Nenhum histórico anterior."
     lines = []
@@ -112,10 +102,6 @@ def build_chat_history_str(chat_history: List[Tuple[str, str]]) -> str:
 
 
 def search_prompt(question: str, llm, vector_store: PGVector, chat_history: List[Tuple[str, str]]) -> Optional[str]:
-    """
-    Fluxo de busca otimizado com Injeção de Dependências.
-    Usa o LLM e VectorStore já injetados.
-    """
     if not question or not question.strip():
         logger.warning("Pergunta vazia informada.")
         return None
@@ -123,17 +109,15 @@ def search_prompt(question: str, llm, vector_store: PGVector, chat_history: List
     try:
         logger.info(f"Executando busca de similaridade para a pergunta '{question[:30]}...'")
         results = vector_store.similarity_search_with_score(question, k=10)
-        
         if not results:
             logger.info("Nenhum resultado encontrado no PGVector.")
             return "Não tenho informações necessárias para responder sua pergunta."
 
         contexto = "\n\n".join(doc.page_content for doc, _score in results)
         historico_formatado = build_chat_history_str(chat_history)
-        
         prompt = PROMPT_TEMPLATE.format(
-            contexto=contexto, 
-            historico=historico_formatado, 
+            contexto=contexto,
+            historico=historico_formatado,
             pergunta=question
         )
 

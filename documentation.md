@@ -153,7 +153,7 @@ Embedding dimensions depend on provider:
 ## OpenAI
 
 -   Embeddings: text-embedding-3-small
--   LLM: gpt-4o-mini
+-   LLM: gpt-5-nano
 
 ## Gemini
 
